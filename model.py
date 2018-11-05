@@ -204,6 +204,8 @@ class DCGAN(object):
       else:
         sample_inputs = np.array(sample).astype(np.float32)
 
+      sample_labels = self.celeba_labels[0:self.sample_num]
+
     counter = 1
     start_time = time.time()
     could_load, checkpoint_counter = self.load(self.checkpoint_dir)
@@ -241,10 +243,12 @@ class DCGAN(object):
           else:
             batch_images = np.array(batch).astype(np.float32)
 
+          batch_labels = self.celeba_labels[idx*config.batch_size:(idx+1)*config.batch_size]
+
         batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
               .astype(np.float32)
 
-        if config.dataset == 'mnist':
+        if config.dataset == 'mnist' or config.dataset == 'celebA':
           # Update D network
           _, summary_str = self.sess.run([d_optim, self.d_sum],
             feed_dict={
@@ -324,6 +328,7 @@ class DCGAN(object):
                 feed_dict={
                     self.z: sample_z,
                     self.inputs: sample_inputs,
+                    self.y: sample_labels,
                 },
               )
               save_images(samples, image_manifold_size(samples.shape[0]),
@@ -346,8 +351,8 @@ class DCGAN(object):
         h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
         h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, name='d_h3_conv')))
         h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h4_lin')
-
         return tf.nn.sigmoid(h4), h4
+
       else:
         yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
         x = conv_cond_concat(image, yb)
@@ -363,7 +368,6 @@ class DCGAN(object):
         h2 = concat([h2, y], 1)
 
         h3 = linear(h2, 1, 'd_h3_lin')
-
         return tf.nn.sigmoid(h3), h3
 
   def generator(self, z, y=None):
