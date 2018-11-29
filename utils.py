@@ -76,11 +76,11 @@ def center_crop(x, crop_h, crop_w,
   return scipy.misc.imresize(
       x[j:j+crop_h, i:i+crop_w], [resize_h, resize_w])
 
-def transform(image, input_height, input_width, 
+def transform(image, input_height, input_width,
               resize_height=64, resize_width=64, crop=True):
   if crop:
     cropped_image = center_crop(
-      image, input_height, input_width, 
+      image, input_height, input_width,
       resize_height, resize_width)
   else:
     cropped_image = scipy.misc.imresize(image, [resize_height, resize_width])
@@ -122,8 +122,8 @@ def to_json(output_path, *layers):
 
         lines += """
           var layer_%s = {
-            "layer_type": "fc", 
-            "sy": 1, "sx": 1, 
+            "layer_type": "fc",
+            "sy": 1, "sx": 1,
             "out_sx": 1, "out_sy": 1,
             "stride": 1, "pad": 0,
             "out_depth": %s, "in_depth": %s,
@@ -139,7 +139,7 @@ def to_json(output_path, *layers):
 
         lines += """
           var layer_%s = {
-            "layer_type": "deconv", 
+            "layer_type": "deconv",
             "sy": 5, "sx": 5,
             "out_sx": %s, "out_sy": %s,
             "stride": 2, "pad": 1,
@@ -241,6 +241,37 @@ def visualize(sess, dcgan, config, option):
     new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10]) \
         for idx in range(64) + range(63, -1, -1)]
     make_gif(new_image_set, './samples/test_gif_merged.gif', duration=8)
+
+    #Sample conditional celebA
+  elif option == 5:
+    values = np.arange(0, 1, 1./config.batch_size)
+    for idx in xrange(dcgan.z_dim):
+      print(" [*] %d" % idx)
+      z_sample = np.random.uniform(-1, 1, size=(config.batch_size , dcgan.z_dim))
+      for kdx, z in enumerate(z_sample):
+        z[idx] = values[kdx]
+
+      #y = np.random.choice(40, config.batch_size)
+      y_one_hot = np.zeros((config.batch_size, 40))
+
+      #Use input vector from first image
+      y_one_hot[0][1] = 1;
+      y_one_hot[0][2] = 1;
+      y_one_hot[0][11] = 1;
+      y_one_hot[0][18] = 1;
+      y_one_hot[0][19] = 1;
+      y_one_hot[0][21] = 1;
+      y_one_hot[0][24] = 1;
+      y_one_hot[0][27] = 1;
+      y_one_hot[0][31] = 1;
+      y_one_hot[0][32] = 1;
+      y_one_hot[0][34] = 1;
+      y_one_hot[0][36] = 1;
+      y_one_hot[0][39] = 1;
+
+      samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample, dcgan.y: y_one_hot})
+
+      save_images(samples, [image_frame_dim, image_frame_dim], './samples/test_arange_%s.png' % (idx))
 
 
 def image_manifold_size(num_images):
